@@ -30,10 +30,13 @@ void GameInit()
     sDir = STOP;
     x = width / 2;
     y = height / 2;
-    fruitCordX = rand() % width;
-    fruitCordY = rand() % height;
     score = 0;
     tailLen = 0;
+    //Spawn fruit away from snake
+    do {
+        fruitCordX = rand() % (width - 2) + 1;
+        fruitCordY = rand() % (height - 2) + 1;
+    } while (fruitCordX == x && fruitCordY == y);
 }
 
 //Function for creating game board & rendering
@@ -49,14 +52,11 @@ void GameRender(std::string playerName)
     //Create Middle Walls & game content
     for (int i = 0; i < height; i++)
     {
-        for (int j = 0; j <= width; j++)
+        std::cout << "#";
+        for (int j = 1; j < width; j++)
         {
-            //Left wall
-            if (j == 0)
-                std::cout << "#";
-
             //Snake head
-            else if (i == y && j == x)
+            if (i == y && j == x)
                 std::cout << "O";
 
             //Food
@@ -81,12 +81,8 @@ void GameRender(std::string playerName)
                 if (!printTail)
                     std::cout << " ";
             }
-
-            //Right wall
-            if (j == width)
-                std::cout << "#";
         }
-        std::cout << std::endl;
+        std::cout << "#" << std::endl;
     }
 
     //Create Bottom Walls
@@ -133,23 +129,11 @@ void GameInput()
 //Function for game logic
 void GameLogic()
 {
-    //Store previous tail position
-    int prevX = snakeTailX[0];
-    int prevY = snakeTailY[0];
-    int prev2X, prev2Y;
+    if (sDir == STOP) return;
 
-    //Update tail positions
-    snakeTailX[0] = x;
-    snakeTailY[0] = y;
-    for (int i = 1; i < tailLen; i++)
-    {
-        prev2X = snakeTailX[i];
-        prev2Y = snakeTailY[i];
-        snakeTailX[i] = prevX;
-        snakeTailY[i] = prevY;
-        prevX = prev2X;
-        prevY = prev2Y;
-    }
+    //Save old head position before moving
+    int prevHeadX = x;
+    int prevHeadY = y;
 
     //Move snake head based on direction
     switch (sDir)
@@ -187,9 +171,34 @@ void GameLogic()
     if (x == fruitCordX && y == fruitCordY)
     {
         score += 10;
-        fruitCordX = rand() % width;
-        fruitCordY = rand() % height;
         tailLen++;
+        //Spawn fruit away from snake body
+        bool onSnake;
+        do {
+            onSnake = false;
+            fruitCordX = rand() % (width - 2) + 1;
+            fruitCordY = rand() % (height - 2) + 1;
+            if (fruitCordX == x && fruitCordY == y)
+                onSnake = true;
+            for (int i = 0; i < tailLen && !onSnake; i++)
+            {
+                if (snakeTailX[i] == fruitCordX && snakeTailY[i] == fruitCordY)
+                    onSnake = true;
+            }
+        } while (onSnake);
+    }
+
+    //Shift tail from end to start
+    for (int i = tailLen - 1; i > 0; i--)
+    {
+        snakeTailX[i] = snakeTailX[i - 1];
+        snakeTailY[i] = snakeTailY[i - 1];
+    }
+    //Place old head position at front of tail
+    if (tailLen > 0)
+    {
+        snakeTailX[0] = prevHeadX;
+        snakeTailY[0] = prevHeadY;
     }
 }
 
@@ -208,6 +217,14 @@ int main()
         GameLogic();
         Sleep(100); //Game speed
     }
+
+    //Game Over screen
+    system("cls");
+    std::cout << "============================" << std::endl;
+    std::cout << "       GAME OVER!" << std::endl;
+    std::cout << "============================" << std::endl;
+    std::cout << playerName << "'s Final Score: " << score << std::endl;
+    std::cout << "============================" << std::endl;
 
     return 0;
 }
